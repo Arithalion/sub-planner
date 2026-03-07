@@ -523,6 +523,8 @@
         if (input) input.value = name;
       });
 
+      // Data was saved, so regenerate the plan on load
+      generatePlan();
     }
 
     // Run loadData as soon as the page is ready
@@ -915,7 +917,25 @@
           editBtn.textContent = '✏️ View/Edit Input';
         }
       });
-      container.appendChild(editBtn);
+      const newPlanBtn = document.createElement('button');
+      newPlanBtn.textContent = '＋ New Plan';
+      newPlanBtn.className = 'btn-secondary';
+      newPlanBtn.style.margin = '0';
+      newPlanBtn.addEventListener('click', () => {
+        if (!confirm('Start a new plan? This will clear the current one.')) return;
+        localStorage.removeItem('subplanner');
+        container.innerHTML = '';
+        document.getElementById('input-section').style.display = 'block';
+        document.getElementById('input-section').scrollIntoView({ behavior: 'smooth' });
+        currentPlan = null;
+      });
+
+      const topBtnRow = document.createElement('div');
+      topBtnRow.style.cssText = 'display:flex; gap:8px; margin-bottom:16px;';
+      editBtn.style.margin = '0';
+      topBtnRow.appendChild(editBtn);
+      topBtnRow.appendChild(newPlanBtn);
+      container.appendChild(topBtnRow);
 
       // Stats bar
       const statsBar = document.createElement('div');
