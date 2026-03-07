@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sub Planner</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap');
+
+    :root {
+      --green: #1a7a3c;
+      --green-light: #2dab57;
+      --green-pale: #e8f7ee;
+      --bench: #f59e0b;
+      --bench-pale: #fef3c7;
+      --dark: #0f2d1a;
+      --border: #2d5c3a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: var(--dark);
+      color: #ffffff;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 20px 16px 16px;
+      background: linear-gradient(135deg, #1a7a3c, #0d4a22);
+      border-radius: 16px;
+      border: 1px solid #2dab5740;
+    }
+
+    header h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.4rem;
+      letter-spacing: 2px;
+      color: var(--green-light);
+    }
+
+    header p {
+      font-size: 0.85rem;
+      color: #a7f3c7;
+      margin-top: 4px;
+    }
+
+    /* ── Form cards ── */
+    .card {
+      background: #162e1f;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.2rem;
+      letter-spacing: 1px;
+      color: #a7f3c7;
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #6db88a;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      font-family: 'Nunito', sans-serif;
+      background: #0f2d1a;
+      color: #d1fae5;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus {
+      border-color: var(--green-light);
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 1px;
+      background: linear-gradient(90deg, var(--green), #0d4a22);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+
+    button:active { opacity: 0.8; }
+
+    .btn-secondary {
+      background: transparent;
+      border: 2px solid var(--border);
+      color: #a7f3c7;
+      font-size: 1rem;
+      padding: 10px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Stats bar ── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    @media (min-width: 400px) {
+      .stats-bar { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .stat {
+      background: #162e1f;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 6px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.6rem;
+      color: var(--green-light);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.63rem;
+      color: #6db88a;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    /* ── Match section ── */
+    .match-section {
+      margin-bottom: 16px;
+      background: #162e1f;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .match-header {
+      background: linear-gradient(90deg, var(--green), #0d4a22);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .match-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.3rem;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chevron {
+      display: inline-block;
+      font-style: normal;
+      font-size: 1rem;
+      transition: transform 0.2s;
+    }
+
+    /* When a match is collapsed, rotate chevron and hide the body */
+    .match-section.collapsed .chevron {
+      transform: rotate(-90deg);
+    }
+
+    .match-body {
+      /* visible by default */
+    }
+
+    .match-section.collapsed .match-body {
+      display: none;
+    }
+
+    .match-subtitle {
+      font-size: 0.75rem;
+      background: rgba(255,255,255,0.15);
+      padding: 2px 8px;
+      border-radius: 20px;
+      color: #d1fae5;
+    }
+
+    /* ── Period grid ── */
+    .grid-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .period-grid {
+      display: grid;
+      border-top: 1px solid var(--border);
+      /* gridTemplateColumns set via JS */
+    }
+
+    .grid-corner {
+      background: #1a3825;
+      padding: 6px 10px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.63rem;
+      color: #6db88a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+    }
+
+    .period-header-cell {
+      background: #1a3825;
+      padding: 6px 4px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.65rem;
+      color: #a7f3c7;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .player-name-cell {
+      background: #162e1f;
+      padding: 7px 10px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid #1e3d28;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #d1fae5;
+      display: flex;
+      align-items: center;
+    }
+
+    .status-cell {
+      padding: 5px 4px;
+      border-right: 1px solid #1e3d28;
+      border-bottom: 1px solid #1e3d28;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pill {
+      width: 100%;
+      padding: 6px 2px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.1s;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pill:active { transform: scale(0.9); }
+
+    .pill-on {
+      background: var(--green-pale);
+      color: #0f5c28;
+      border: 1px solid #86efac;
+    }
+
+    .pill-off {
+      background: var(--bench-pale);
+      color: #78350f;
+      border: 1px solid #fcd34d;
+    }
+
+    /* Red outline on a period column when fewer than required players are on */
+    .period-header-cell.col-invalid {
+      background: rgba(248,113,113,0.18);
+      color: #f87171;
+      border-bottom: 2px solid #f87171;
+    }
+
+    .status-cell.col-invalid {
+      background: rgba(248,113,113,0.06);
+      outline: 1px solid rgba(248,113,113,0.35);
+    }
+
+    /* Make the Playtime column stand out in the summary */
+    .playtime-col {
+      color: var(--green-light) !important;
+      font-weight: 800 !important;
+    }
+    .playtime-col-header {
+      color: var(--green-light) !important;
+    }
+
+    /* ── Sub times footer row ── */
+    .sub-row {
+      padding: 7px 16px;
+      background: #1a3825;
+      border-top: 1px dashed var(--border);
+      font-size: 0.72rem;
+      color: #86d9a6;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .sub-row strong { color: #a7f3c7; }
+
+    /* ── Sub list ── */
+    .sub-list {
+      padding: 10px 16px 12px;
+      background: #162e1f;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sub-list-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #6db88a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+
+    .sub-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.82rem;
+    }
+
+    .sub-minute {
+      font-weight: 800;
+      color: #a7f3c7;
+      width: 28px;
+      flex-shrink: 0;
+    }
+
+    .sub-off {
+      color: #f87171;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sub-on {
+      color: #4ade80;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sub-divider {
+      color: #2d5c3a;
+    }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: #6db88a;
+    }
+
+    .legend-pill {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.63rem;
+      font-weight: 800;
+    }
+
+    /* ── Summary table ── */
+    .summary-section {
+      background: #162e1f;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .summary-header {
+      background: #1e3d28;
+      padding: 10px 16px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+      color: #a7f3c7;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .summary-table th,
+    .summary-table td {
+      padding: 8px 10px;
+      text-align: center;
+      font-size: 0.78rem;
+      border-bottom: 1px solid #1e3d28;
+    }
+
+    .summary-table th {
+      color: #6db88a;
+      font-size: 0.66rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .summary-table td:first-child {
+      text-align: left;
+      font-weight: 700;
+      color: #d1fae5;
+    }
+
+    .summary-table tr:last-child td { border-bottom: none; }
+
+    .total-cell {
+      font-weight: 800;
+      color: var(--green-light) !important;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚽ Sub Planner</h1>
+    <p>Fair substitutions for kids' football</p>
+  </header>
+
+  <div id="input-section">
+
+  <div class="card">
+    <p class="section-title">Match Setup</p>
+
+    <label for="num-matches">Number of matches</label>
+    <input type="number" id="num-matches" min="1" placeholder="e.g. 3">
+
+    <label for="match-duration">Match duration (minutes)</label>
+    <input type="number" id="match-duration" min="1" placeholder="e.g. 18">
+
+    <label for="players-on-pitch">Players on pitch</label>
+    <input type="number" id="players-on-pitch" min="1" placeholder="e.g. 3">
+
+    <label for="squad-size">Squad size</label>
+    <input type="number" id="squad-size" min="1" placeholder="e.g. 5">
+  </div>
+
+  <div class="card" id="player-names" style="display: none;">
+    <p class="section-title">Player Names</p>
+    <div id="name-fields"></div>
+  </div>
+
+  <button onclick="generatePlan()">Generate Plan</button>
+
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+
+    // ── Save & load (localStorage) ───────────────────────────────────────
+    //
+    // localStorage is a browser built-in key/value store that persists even
+    // after you close the tab. We store everything as a JSON string.
+
+    function saveData(playersOnPitch, squadSize, numMatches, matchDuration, players) {
+      localStorage.setItem('subplanner', JSON.stringify({
+        playersOnPitch, squadSize, numMatches, matchDuration, players
+      }));
+    }
+
+    function loadData() {
+      const saved = localStorage.getItem('subplanner');
+      if (!saved) return; // nothing saved yet
+
+      const data = JSON.parse(saved);
+
+      // Restore number inputs
+      document.getElementById('players-on-pitch').value = data.playersOnPitch;
+      document.getElementById('squad-size').value       = data.squadSize;
+      document.getElementById('num-matches').value      = data.numMatches;
+      document.getElementById('match-duration').value   = data.matchDuration;
+
+      // Trigger the squad-size listener so name fields appear
+      document.getElementById('squad-size').dispatchEvent(new Event('input'));
+
+      // Restore player names
+      data.players.forEach((name, i) => {
+        const input = document.getElementById('player-' + (i + 1));
+        if (input) input.value = name;
+      });
+
+      // Re-generate the plan automatically
+      generatePlan();
+    }
+
+    // Run loadData as soon as the page is ready
+    document.addEventListener('DOMContentLoaded', loadData);
+
+
+    // ── Dynamic name fields ──────────────────────────────────────────────
+
+    document.getElementById('squad-size').addEventListener('input', function() {
+      const count = parseInt(this.value);
+      const container = document.getElementById('name-fields');
+      const card = document.getElementById('player-names');
+      container.innerHTML = '';
+
+      if (count > 0) {
+        card.style.display = 'block';
+        for (let i = 1; i <= count; i++) {
+          const label = document.createElement('label');
+          label.textContent = 'Player ' + i;
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.placeholder = 'Name';
+          input.id = 'player-' + i;
+          container.appendChild(label);
+          container.appendChild(input);
+        }
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+
+    // ── Plan generation ──────────────────────────────────────────────────
+
+    function generatePlan() {
+      const playersOnPitch = parseInt(document.getElementById('players-on-pitch').value);
+      const squadSize      = parseInt(document.getElementById('squad-size').value);
+      const numMatches     = parseInt(document.getElementById('num-matches').value);
+      const matchDuration  = parseInt(document.getElementById('match-duration').value);
+
+      if (!playersOnPitch || !squadSize || !numMatches || !matchDuration) {
+        alert('Please fill in all match setup fields.');
+        return;
+      }
+      if (playersOnPitch > squadSize) {
+        alert("Players on pitch can't be more than squad size.");
+        return;
+      }
+
+      // Collect names
+      const players = [];
+      for (let i = 1; i <= squadSize; i++) {
+        const input = document.getElementById('player-' + i);
+        players.push(input && input.value.trim() ? input.value.trim() : 'Player ' + i);
+      }
+
+      // Divide each match into squadSize segments → equal time per player per match
+      const numSegments = squadSize;
+      const numSubs     = numSegments - 1;
+
+      const minutesPlayed  = new Array(squadSize).fill(0);
+      const plan           = [];
+      const perMatchMinutes = []; // minutes per player per match, for the summary table
+
+      for (let m = 0; m < numMatches; m++) {
+        const matchData = {
+          matchNumber: m + 1,
+          segments: [],
+          subs: []
+        };
+        const matchMins = new Array(squadSize).fill(0);
+
+        function segDur(seg) {
+          return Math.round(matchDuration * (seg + 1) / numSegments)
+               - Math.round(matchDuration * seg / numSegments);
+        }
+
+        // consecutiveOn: how many segments in a row each player has been on (resets each match)
+        const consecutiveOn = new Array(squadSize).fill(0);
+
+        // matchSegsPlayed: segments played so far THIS match — the primary fairness key
+        const matchSegsPlayed = new Array(squadSize).fill(0);
+
+        // Target: each player should play exactly playersOnPitch segments per match
+        // (e.g. 3 segments out of 5 when squad=5, pitch=3 → perfectly equal time)
+        const targetSegs = playersOnPitch;
+
+        // ── Segment 0: pick starters ──
+        // Sort by cumulative minutes (cross-match fairness), tie-break with noise
+        let currentOnPitch = [...allIndices(squadSize)]
+          .sort((a, b) =>
+            minutesPlayed[a] - minutesPlayed[b] + (Math.random() - 0.5) * 0.5
+          )
+          .slice(0, playersOnPitch);
+
+        matchData.segments.push([...currentOnPitch]);
+        currentOnPitch.forEach(i => {
+          consecutiveOn[i]   = 1;
+          matchSegsPlayed[i]++;
+          minutesPlayed[i]  += segDur(0);
+          matchMins[i]      += segDur(0);
+        });
+
+        // ── Segments 1 … numSegments-1 ──
+        for (let seg = 1; seg < numSegments; seg++) {
+          const prevLineup = [...currentOnPitch];
+
+          // Build the eligible pool in order of strictness:
+          //   Level 1 — ideal: not at consecutive limit AND under target segs
+          //   Level 2 — relaxed: only the consecutive limit
+          //   Level 3 — fallback: everyone (avoids deadlock for unusual squad sizes)
+          const lvl1 = allIndices(squadSize).filter(i =>
+            consecutiveOn[i] < 2 && matchSegsPlayed[i] < targetSegs
+          );
+          const lvl2 = allIndices(squadSize).filter(i => consecutiveOn[i] < 2);
+          const pool = lvl1.length >= playersOnPitch ? lvl1
+                     : lvl2.length >= playersOnPitch ? lvl2
+                     : allIndices(squadSize);
+
+          // Pick the playersOnPitch candidates with:
+          //   Primary key   → fewest matchSegsPlayed (within-match equality)
+          //   Secondary key → fewest cumulative minutesPlayed (cross-match equality)
+          //   Tertiary key  → small random noise (avoid identical patterns every game)
+          const sorted = [...pool].sort((a, b) => {
+            const sd = matchSegsPlayed[a] - matchSegsPlayed[b];
+            if (sd !== 0) return sd;
+            return minutesPlayed[a] - minutesPlayed[b] + (Math.random() - 0.5) * 0.5;
+          });
+
+          let newLineup = sorted.slice(0, playersOnPitch);
+
+          // Safety: if lineup is identical to previous, force one swap
+          // (picks the most-played on-pitch out, least-played bench in)
+          if (newLineup.every(i => prevLineup.includes(i))) {
+            const toRemove = [...prevLineup].sort(
+              (a, b) => matchSegsPlayed[b] - matchSegsPlayed[a] || minutesPlayed[b] - minutesPlayed[a]
+            )[0];
+            const toAdd = getIndicesNotIn(prevLineup, squadSize)
+              .filter(i => consecutiveOn[i] < 2)
+              .sort((a, b) => matchSegsPlayed[a] - matchSegsPlayed[b] || minutesPlayed[a] - minutesPlayed[b])[0];
+            if (toAdd !== undefined) {
+              newLineup = prevLineup.filter(i => i !== toRemove).concat([toAdd]);
+            }
+          }
+
+          currentOnPitch = newLineup;
+
+          // Record substitution events
+          const playersOff = prevLineup.filter(i => !currentOnPitch.includes(i));
+          const playersOn  = currentOnPitch.filter(i => !prevLineup.includes(i));
+          if (playersOff.length > 0) {
+            matchData.subs.push({
+              minute: Math.round(matchDuration * seg / numSegments),
+              playersOff,
+              playersOn
+            });
+          }
+
+          // Update state
+          for (let i = 0; i < squadSize; i++) {
+            if (currentOnPitch.includes(i)) {
+              consecutiveOn[i]   = prevLineup.includes(i) ? consecutiveOn[i] + 1 : 1;
+              matchSegsPlayed[i]++;
+              minutesPlayed[i]  += segDur(seg);
+              matchMins[i]      += segDur(seg);
+            } else {
+              consecutiveOn[i] = 0;
+            }
+          }
+
+          matchData.segments.push([...currentOnPitch]);
+        }
+
+        perMatchMinutes.push(matchMins);
+        plan.push(matchData);
+      }
+
+      // Save inputs so the plan reloads automatically next time
+      saveData(playersOnPitch, squadSize, numMatches, matchDuration, players);
+
+      // Collapse the input form now that we have a plan
+      document.getElementById('input-section').style.display = 'none';
+
+      displayPlan(plan, players, minutesPlayed, perMatchMinutes, {
+        playersOnPitch, squadSize, numMatches, matchDuration, numSegments, numSubs
+      });
+    }
+
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+
+    // Holds the active plan so click handlers and update functions can reach it
+    let currentPlan = null;
+
+    function allIndices(n) {
+      return Array.from({ length: n }, (_, i) => i);
+    }
+
+    function sortByMinutesWithNoise(indices, minutesPlayed, direction) {
+      return [...indices].sort((a, b) => {
+        const diff  = minutesPlayed[a] - minutesPlayed[b];
+        const noise = (Math.random() - 0.5) * 1.5;
+        return direction === 'asc' ? diff + noise : -(diff + noise);
+      });
+    }
+
+    function getIndicesNotIn(arr, total) {
+      const result = [];
+      for (let i = 0; i < total; i++) {
+        if (!arr.includes(i)) result.push(i);
+      }
+      return result;
+    }
+
+    function shortName(name) {
+      return name.length > 10 ? name.slice(0, 9) + '…' : name;
+    }
+
+    // Derive substitutions by comparing consecutive segment lineups
+    function recomputeSubs(segments, matchDuration, numSegments) {
+      const subs = [];
+      for (let seg = 1; seg < segments.length; seg++) {
+        const prev = segments[seg - 1];
+        const curr = segments[seg];
+        const playersOff = prev.filter(i => !curr.includes(i));
+        const playersOn  = curr.filter(i => !prev.includes(i));
+        if (playersOff.length > 0 || playersOn.length > 0) {
+          subs.push({
+            minute: Math.round(matchDuration * seg / numSegments),
+            playersOff,
+            playersOn
+          });
+        }
+      }
+      return subs;
+    }
+
+    // Recompute per-match and total minutes from the current grid state
+    function recomputeMinutes(plan, config) {
+      const { squadSize, matchDuration, numSegments } = config;
+      const perMatchMinutes = plan.map(match => {
+        const mm = new Array(squadSize).fill(0);
+        match.segments.forEach((lineup, seg) => {
+          const dur = Math.round(matchDuration * (seg + 1) / numSegments)
+                    - Math.round(matchDuration * seg / numSegments);
+          lineup.forEach(i => { mm[i] += dur; });
+        });
+        return mm;
+      });
+      const totalMinutes = new Array(squadSize).fill(0);
+      perMatchMinutes.forEach(mm => mm.forEach((m, i) => { totalMinutes[i] += m; }));
+      return { perMatchMinutes, totalMinutes };
+    }
+
+    // Build the sub list HTML for one match (used on initial render and on updates)
+    function renderSubListItems(matchIdx) {
+      const { plan, players } = currentPlan;
+      const subs = plan[matchIdx].subs;
+      let html = '<div class="sub-list-title">Substitutions</div>';
+      if (subs.length === 0) {
+        html += '<div style="font-size:0.8rem;color:#6db88a;padding:4px 0;">No substitutions</div>';
+      } else {
+        subs.forEach(sub => {
+          const offNames = sub.playersOff.map(i => players[i]).join(', ');
+          const onNames  = sub.playersOn.map(i => players[i]).join(', ');
+          html +=
+            `<div class="sub-item">` +
+            `<span class="sub-minute">${sub.minute}'</span>` +
+            `<span class="sub-off">↓ ${offNames}</span>` +
+            `<span class="sub-divider">·</span>` +
+            `<span class="sub-on">↑ ${onNames}</span>` +
+            `</div>`;
+        });
+      }
+      return html;
+    }
+
+    // Called when a pill is clicked — toggles the player, then refreshes all derived displays
+    function onPillClick(matchIdx, segIdx, playerIdx) {
+      const { plan, config } = currentPlan;
+      const match = plan[matchIdx];
+
+      // Toggle this player in this segment
+      const isOn = match.segments[segIdx].includes(playerIdx);
+      match.segments[segIdx] = isOn
+        ? match.segments[segIdx].filter(i => i !== playerIdx)
+        : [...match.segments[segIdx], playerIdx];
+
+      // Flip the pill appearance immediately
+      const pill = document.querySelector(
+        `.pill[data-match="${matchIdx}"][data-seg="${segIdx}"][data-player="${playerIdx}"]`
+      );
+      if (pill) {
+        const nowOn = !isOn;
+        pill.className = 'pill ' + (nowOn ? 'pill-on' : 'pill-off');
+        pill.textContent = nowOn ? 'ON' : 'OFF';
+      }
+
+      // Recompute derived data
+      match.subs = recomputeSubs(match.segments, config.matchDuration, config.numSegments);
+      const { perMatchMinutes, totalMinutes } = recomputeMinutes(plan, config);
+      currentPlan.perMatchMinutes = perMatchMinutes;
+      currentPlan.minutesPlayed   = totalMinutes;
+
+      // Refresh displays
+      updateColumnValidation(matchIdx);
+      updateSubFooter(matchIdx);
+      document.getElementById('sub-list-' + matchIdx).innerHTML = renderSubListItems(matchIdx);
+      updatePlaytimeSummary();
+    }
+
+    function updateColumnValidation(matchIdx) {
+      const { plan, config } = currentPlan;
+      const segments = plan[matchIdx].segments;
+      for (let seg = 0; seg < config.numSegments; seg++) {
+        const invalid = segments[seg].length < config.playersOnPitch;
+        const hdr = document.querySelector(
+          `.period-header-cell[data-match="${matchIdx}"][data-seg="${seg}"]`
+        );
+        if (hdr) hdr.classList.toggle('col-invalid', invalid);
+        document.querySelectorAll(
+          `.status-cell[data-match="${matchIdx}"][data-seg="${seg}"]`
+        ).forEach(c => c.classList.toggle('col-invalid', invalid));
+      }
+    }
+
+    function updateSubFooter(matchIdx) {
+      const el = document.getElementById('sub-footer-' + matchIdx);
+      if (!el) return;
+      const { plan, players, perMatchMinutes } = currentPlan;
+      const subMins = plan[matchIdx].subs.length
+        ? plan[matchIdx].subs.map(s => `<strong>${s.minute}'</strong>`).join(' · ')
+        : '—';
+      const playtime = players.map((name, i) =>
+        shortName(name) + ' ' + perMatchMinutes[matchIdx][i] + "'"
+      ).join(' · ');
+      el.innerHTML = '⏱ Subs at: ' + subMins + ' &nbsp;|&nbsp; Playtime: ' + playtime;
+    }
+
+    function updatePlaytimeSummary() {
+      const tbody = document.getElementById('playtime-tbody');
+      if (!tbody) return;
+      const { players, perMatchMinutes, minutesPlayed } = currentPlan;
+      tbody.innerHTML = '';
+      players.forEach((name, i) => {
+        const tr = document.createElement('tr');
+        let cells = `<td>${name}</td>`;
+        perMatchMinutes.forEach(mm => { cells += `<td>${mm[i]}'</td>`; });
+        cells += `<td class="playtime-col">${minutesPlayed[i]}'</td>`;
+        tr.innerHTML = cells;
+        tbody.appendChild(tr);
+      });
+    }
+
+
+    // ── Display ──────────────────────────────────────────────────────────
+
+    function displayPlan(plan, players, minutesPlayed, perMatchMinutes, config) {
+      const container = document.getElementById('results');
+      container.innerHTML = '';
+
+      // Store plan state so interactive handlers can access it
+      currentPlan = { plan, players, minutesPlayed, perMatchMinutes, config };
+
+      const { playersOnPitch, squadSize, numMatches, matchDuration, numSegments, numSubs } = config;
+      const minsPerPlayer = Math.round(playersOnPitch * matchDuration / squadSize);
+      const totalMins     = Math.round(playersOnPitch * matchDuration * numMatches / squadSize);
+      const periodLen     = Math.round(matchDuration / numSegments);
+
+      // View/Edit Input toggle button
+      const editBtn = document.createElement('button');
+      editBtn.textContent = '✏️ View/Edit Input';
+      editBtn.className = 'btn-secondary';
+      editBtn.addEventListener('click', () => {
+        const inputSection = document.getElementById('input-section');
+        const isHidden = inputSection.style.display === 'none';
+        if (isHidden) {
+          inputSection.style.display = 'block';
+          inputSection.scrollIntoView({ behavior: 'smooth' });
+          editBtn.textContent = '✕ Hide Input';
+        } else {
+          inputSection.style.display = 'none';
+          editBtn.textContent = '✏️ View/Edit Input';
+        }
+      });
+      container.appendChild(editBtn);
+
+      // Stats bar
+      const statsBar = document.createElement('div');
+      statsBar.className = 'stats-bar';
+      [
+        { num: numSubs,             label: 'Subs/match' },
+        { num: minsPerPlayer + "'", label: 'Mins/match' },
+        { num: totalMins + "'",     label: 'Total mins' },
+        { num: periodLen + "'",     label: 'Periods' }
+      ].forEach(s => {
+        statsBar.innerHTML +=
+          `<div class="stat">` +
+          `<div class="stat-num">${s.num}</div>` +
+          `<div class="stat-label">${s.label}</div>` +
+          `</div>`;
+      });
+      container.appendChild(statsBar);
+
+      // Expand / collapse all buttons
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;';
+      const viewAllBtn = document.createElement('button');
+      viewAllBtn.textContent = 'View All Matches';
+      viewAllBtn.style.margin = '0';
+      viewAllBtn.addEventListener('click', () =>
+        document.querySelectorAll('.match-section').forEach(s => s.classList.remove('collapsed'))
+      );
+      const collapseAllBtn = document.createElement('button');
+      collapseAllBtn.textContent = 'Collapse All';
+      collapseAllBtn.style.margin = '0';
+      collapseAllBtn.addEventListener('click', () =>
+        document.querySelectorAll('.match-section').forEach(s => s.classList.add('collapsed'))
+      );
+      btnRow.appendChild(viewAllBtn);
+      btnRow.appendChild(collapseAllBtn);
+      container.appendChild(btnRow);
+
+      // ── One card per match ──
+      plan.forEach((match, matchIdx) => {
+        const section = document.createElement('div');
+        section.className = 'match-section';
+
+        // Header (click to collapse/expand)
+        const header = document.createElement('div');
+        header.className = 'match-header';
+        header.innerHTML =
+          `<span class="match-title">🟢 Match ${match.matchNumber} <i class="chevron">▾</i></span>` +
+          `<span class="match-subtitle">${matchDuration} min · sub every ${periodLen}'</span>`;
+        section.appendChild(header);
+        header.addEventListener('click', () => section.classList.toggle('collapsed'));
+
+        const matchBody = document.createElement('div');
+        matchBody.className = 'match-body';
+
+        // ── Period grid ──
+        const scrollWrap = document.createElement('div');
+        scrollWrap.className = 'grid-scroll';
+
+        const grid = document.createElement('div');
+        grid.className = 'period-grid';
+        grid.style.gridTemplateColumns = `90px repeat(${numSegments}, 1fr)`;
+        grid.style.minWidth = (90 + numSegments * 52) + 'px';
+
+        // Column headers — data attrs needed for validation updates
+        const corner = document.createElement('div');
+        corner.className = 'grid-corner';
+        corner.textContent = 'Player';
+        grid.appendChild(corner);
+
+        for (let seg = 0; seg < numSegments; seg++) {
+          const segStart = Math.round(matchDuration * seg / numSegments);
+          const segEnd   = Math.round(matchDuration * (seg + 1) / numSegments);
+          const cell = document.createElement('div');
+          cell.className = 'period-header-cell';
+          cell.textContent = segStart + '–' + segEnd + "'";
+          cell.dataset.match = matchIdx;
+          cell.dataset.seg   = seg;
+          grid.appendChild(cell);
+        }
+
+        // Player rows — each pill is clickable
+        players.forEach((name, playerIdx) => {
+          const nameCell = document.createElement('div');
+          nameCell.className = 'player-name-cell';
+          nameCell.textContent = shortName(name);
+          grid.appendChild(nameCell);
+
+          match.segments.forEach((segLineup, segIdx) => {
+            const isOn = segLineup.includes(playerIdx);
+            const cell = document.createElement('div');
+            cell.className = 'status-cell';
+            cell.dataset.match = matchIdx;
+            cell.dataset.seg   = segIdx;
+
+            const pill = document.createElement('div');
+            pill.className = 'pill ' + (isOn ? 'pill-on' : 'pill-off');
+            pill.textContent = isOn ? 'ON' : 'OFF';
+            pill.dataset.match  = matchIdx;
+            pill.dataset.seg    = segIdx;
+            pill.dataset.player = playerIdx;
+            pill.addEventListener('click', () => onPillClick(matchIdx, segIdx, playerIdx));
+
+            cell.appendChild(pill);
+            grid.appendChild(cell);
+          });
+        });
+
+        scrollWrap.appendChild(grid);
+        matchBody.appendChild(scrollWrap);
+
+        // ── Sub footer — populated by updateSubFooter ──
+        const subFooter = document.createElement('div');
+        subFooter.className = 'sub-row';
+        subFooter.id = 'sub-footer-' + matchIdx;
+        matchBody.appendChild(subFooter);
+
+        // ── Substitution list — populated by renderSubListItems ──
+        const subList = document.createElement('div');
+        subList.className = 'sub-list';
+        subList.id = 'sub-list-' + matchIdx;
+        matchBody.appendChild(subList);
+
+        section.appendChild(matchBody);
+        container.appendChild(section);
+      });
+
+      // Legend
+      const legend = document.createElement('div');
+      legend.className = 'legend';
+      legend.innerHTML =
+        `<div class="legend-item"><div class="pill pill-on legend-pill">ON</div> On pitch</div>` +
+        `<div class="legend-item"><div class="pill pill-off legend-pill">OFF</div> Resting</div>`;
+      container.appendChild(legend);
+
+      // ── Playtime summary table ──
+      const summarySection = document.createElement('div');
+      summarySection.className = 'summary-section';
+      let tableHTML = '<div class="summary-header">📊 Playtime Overview</div>';
+      tableHTML += '<table class="summary-table"><thead><tr><th>Player</th>';
+      for (let m = 0; m < numMatches; m++) tableHTML += `<th>Match ${m + 1}</th>`;
+      tableHTML += '<th class="playtime-col-header">Playtime</th></tr></thead>';
+      tableHTML += '<tbody id="playtime-tbody"></tbody></table>';
+      summarySection.innerHTML = tableHTML;
+      container.appendChild(summarySection);
+
+      // Populate all derived sections now that the DOM is ready
+      plan.forEach((_, matchIdx) => {
+        updateSubFooter(matchIdx);
+        document.getElementById('sub-list-' + matchIdx).innerHTML = renderSubListItems(matchIdx);
+        updateColumnValidation(matchIdx);
+      });
+      updatePlaytimeSummary();
+
+      container.scrollIntoView({ behavior: 'smooth' });
+    }
+
+  </script>
+
+</body>
+</html>
