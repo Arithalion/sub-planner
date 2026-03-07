@@ -537,6 +537,7 @@
       // If a full plan was saved, restore it directly — no re-generation
       if (data.fullPlan) {
         const p = data.fullPlan;
+        document.getElementById('input-section').style.display = 'none';
         displayPlan(p.plan, p.players, p.minutesPlayed, p.perMatchMinutes, p.config);
         return;
       }
