@@ -1283,16 +1283,26 @@
 
     // ── Stopwatch ────────────────────────────────────────────────────────
     //
-    // elapsed: seconds since the timer started for the current match.
-    // We track which match is being timed so we can highlight its subs.
+    // Instead of counting ticks (which iOS throttles when the screen locks),
+    // we store the real wall-clock time when the timer starts/resumes.
+    // Elapsed is always calculated as (now - startTimestamp) + elapsedAtPause,
+    // so coming back from a locked screen catches up instantly.
 
     let watchState = {
-      matchIdx:    null,
-      elapsed:     0,
-      running:     false,
-      interval:    null,
-      alertedSubs: new Set() // tracks which sub indices have already beeped
+      matchIdx:       null,
+      elapsedAtPause: 0,     // seconds elapsed before the last pause
+      startTimestamp: null,  // Date.now() when last started/resumed
+      running:        false,
+      interval:       null,
+      alertedSubs:    new Set()
     };
+
+    // Returns current elapsed seconds, using real time
+    function getElapsed() {
+      if (!watchState.running) return watchState.elapsedAtPause;
+      return watchState.elapsedAtPause +
+        Math.floor((Date.now() - watchState.startTimestamp) / 1000);
+    }
 
     // Sound is off by default; toggled by the 🔔 button
     let watchSoundOn = false;
@@ -1321,22 +1331,21 @@
     }
 
     function startWatch(matchIdx) {
-      // Stop any existing timer first
       clearInterval(watchState.interval);
       clearWatchHighlights();
 
-      watchState.matchIdx    = matchIdx;
-      watchState.elapsed     = 0;
-      watchState.running     = true;
-      watchState.alertedSubs = new Set();
-      watchState.interval    = setInterval(tickWatch, 1000);
+      watchState.matchIdx       = matchIdx;
+      watchState.elapsedAtPause = 0;
+      watchState.startTimestamp = Date.now();
+      watchState.running        = true;
+      watchState.alertedSubs    = new Set();
+      watchState.interval       = setInterval(tickWatch, 1000);
 
       document.getElementById('watch-match-label').textContent =
         'Match ' + (matchIdx + 1);
       document.getElementById('watch-bar').classList.add('active');
       document.body.style.paddingBottom = '80px';
 
-      // Mark the active timer button
       document.querySelectorAll('.timer-btn').forEach(b => b.classList.remove('timing'));
       const btn = document.querySelector(`.timer-btn[data-match="${matchIdx}"]`);
       if (btn) btn.classList.add('timing');
@@ -1348,19 +1357,23 @@
       const btn = document.getElementById('watch-pause-btn');
       if (watchState.running) {
         clearInterval(watchState.interval);
-        watchState.running = false;
+        watchState.elapsedAtPause = getElapsed(); // freeze elapsed at real time
+        watchState.startTimestamp = null;
+        watchState.running        = false;
         btn.textContent = '▶';
       } else {
-        watchState.interval = setInterval(tickWatch, 1000);
-        watchState.running  = true;
+        watchState.startTimestamp = Date.now(); // resume from now
+        watchState.running        = true;
+        watchState.interval       = setInterval(tickWatch, 1000);
         btn.textContent = '⏸';
       }
     }
 
     function stopWatch() {
       clearInterval(watchState.interval);
-      watchState.running  = false;
-      watchState.matchIdx = null;
+      watchState.running        = false;
+      watchState.startTimestamp = null;
+      watchState.matchIdx       = null;
       document.getElementById('watch-bar').classList.remove('active');
       document.getElementById('watch-pause-btn').textContent = '⏸';
       document.body.style.paddingBottom = '16px';
@@ -1369,59 +1382,54 @@
     }
 
     function tickWatch() {
-      watchState.elapsed++;
-
+      const elapsed   = getElapsed();
       const { matchDuration } = currentPlan.config;
       const totalSecs = matchDuration * 60;
-      const display   = Math.min(watchState.elapsed, totalSecs);
+      const display   = Math.min(elapsed, totalSecs);
       const mins = Math.floor(display / 60);
       const secs = display % 60;
       const timeEl = document.getElementById('watch-time');
       timeEl.textContent = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
 
-      // Turn the time red in the last 60 seconds of the match
-      timeEl.classList.toggle('watch-ending', watchState.elapsed >= totalSecs - 60);
+      timeEl.classList.toggle('watch-ending', elapsed >= totalSecs - 60);
 
-      updateWatchHighlights();
+      updateWatchHighlights(elapsed);
 
-      // Auto-stop when match time is up
-      if (watchState.elapsed >= totalSecs) stopWatch();
+      if (elapsed >= totalSecs) stopWatch();
     }
 
-    function updateWatchHighlights() {
+    function updateWatchHighlights(elapsed) {
       if (!currentPlan || watchState.matchIdx === null) return;
+      if (elapsed === undefined) elapsed = getElapsed();
 
       const match      = currentPlan.plan[watchState.matchIdx];
-      const elapsedMin = watchState.elapsed / 60;
+      const elapsedMin = elapsed / 60;
       const nextEl     = document.getElementById('watch-next');
 
-      // Find the next sub that hasn't happened yet
       const upcoming = match.subs.find(s => s.minute > elapsedMin);
 
       if (upcoming) {
-        const secsLeft = Math.round(upcoming.minute * 60 - watchState.elapsed);
+        const secsLeft = Math.round(upcoming.minute * 60 - elapsed);
         const m = Math.floor(secsLeft / 60);
         const s = secsLeft % 60;
         nextEl.textContent = 'Sub at ' + upcoming.minute + "' — in " +
           m + ':' + String(s).padStart(2, '0');
         nextEl.classList.toggle('watch-soon', secsLeft <= 60);
       } else {
-        nextEl.textContent  = 'No more subs';
+        nextEl.textContent = 'No more subs';
         nextEl.classList.remove('watch-soon');
       }
 
-      // Highlight sub items for this match
       const items = document.querySelectorAll('#sub-list-' + watchState.matchIdx + ' .sub-item');
       match.subs.forEach((sub, i) => {
         const el = items[i];
         if (!el) return;
         el.classList.remove('sub-upcoming', 'sub-imminent', 'sub-done');
-        const secsTillSub = sub.minute * 60 - watchState.elapsed;
+        const secsTillSub = sub.minute * 60 - elapsed;
         if (secsTillSub <= 0) {
           el.classList.add('sub-done');
         } else if (secsTillSub <= 30) {
           el.classList.add('sub-imminent');
-          // Beep once when first crossing the 30s threshold
           if (watchSoundOn && !watchState.alertedSubs.has(i)) {
             watchState.alertedSubs.add(i);
             playBeep();
