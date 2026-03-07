@@ -435,12 +435,18 @@
       border-top: 2px solid var(--green-light);
       padding: 10px 16px;
       display: none;
-      align-items: center;
-      gap: 12px;
+      flex-direction: column;
+      gap: 6px;
       z-index: 999;
     }
 
     .watch-bar.active { display: flex; }
+
+    .watch-bar-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
     .watch-time {
       font-family: 'Bebas Neue', sans-serif;
@@ -453,15 +459,8 @@
 
     .watch-time.watch-ending { color: #f87171; }
 
-    .watch-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
-    }
-
     .watch-match-label {
+      flex: 1;
       font-size: 0.63rem;
       color: #6db88a;
       text-transform: uppercase;
@@ -469,22 +468,19 @@
       font-weight: 700;
     }
 
-    .watch-next {
-      font-size: 0.8rem;
-      color: #a7f3c7;
-      font-weight: 700;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .watch-next.watch-soon { color: var(--bench); }
-
     .watch-controls {
       display: flex;
       gap: 8px;
       flex-shrink: 0;
     }
+
+    .watch-next {
+      font-size: 0.82rem;
+      color: #a7f3c7;
+      font-weight: 700;
+    }
+
+    .watch-next.watch-soon { color: var(--bench); }
 
     .watch-btn {
       padding: 8px 12px;
@@ -1448,16 +1444,16 @@
 
   </script>
   <div id="watch-bar" class="watch-bar">
-    <div id="watch-time" class="watch-time">00:00</div>
-    <div class="watch-info">
+    <div class="watch-bar-top">
+      <div id="watch-time" class="watch-time">00:00</div>
       <div id="watch-match-label" class="watch-match-label"></div>
-      <div id="watch-next" class="watch-next"></div>
+      <div class="watch-controls">
+        <button id="watch-sound-btn" class="watch-btn watch-btn-stop" onclick="toggleWatchSound()" title="Toggle sound">🔔</button>
+        <button id="watch-pause-btn" class="watch-btn watch-btn-pause" onclick="pauseWatch()">⏸</button>
+        <button class="watch-btn watch-btn-stop" onclick="stopWatch()">■</button>
+      </div>
     </div>
-    <div class="watch-controls">
-      <button id="watch-sound-btn" class="watch-btn watch-btn-stop" onclick="toggleWatchSound()" title="Toggle sound">🔔</button>
-      <button id="watch-pause-btn" class="watch-btn watch-btn-pause" onclick="pauseWatch()">⏸</button>
-      <button class="watch-btn watch-btn-stop" onclick="stopWatch()">■</button>
-    </div>
+    <div id="watch-next" class="watch-next"></div>
   </div>
 
 </body>
