@@ -399,6 +399,136 @@
       font-weight: 800;
     }
 
+    /* ── Sub highlight states ── */
+    .sub-item.sub-upcoming {
+      background: #3d2b00;
+      border: 1px solid var(--bench);
+      border-radius: 6px;
+      padding: 2px 4px;
+      animation: pulse-amber 1s ease-in-out infinite alternate;
+    }
+
+    .sub-item.sub-imminent {
+      background: #5c3a00;
+      border: 1px solid #fbbf24;
+      border-radius: 6px;
+      padding: 2px 4px;
+      animation: pulse-amber 0.4s ease-in-out infinite alternate;
+    }
+
+    .sub-item.sub-done {
+      opacity: 0.35;
+    }
+
+    @keyframes pulse-amber {
+      from { box-shadow: 0 0 0px #f59e0b40; }
+      to   { box-shadow: 0 0 10px #f59e0bb0; }
+    }
+
+    /* ── Stopwatch bar (fixed, only shown when active) ── */
+    .watch-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #0a1f10;
+      border-top: 2px solid var(--green-light);
+      padding: 10px 16px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      z-index: 999;
+    }
+
+    .watch-bar.active { display: flex; }
+
+    .watch-time {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2.2rem;
+      color: var(--green-light);
+      letter-spacing: 2px;
+      line-height: 1;
+      min-width: 82px;
+    }
+
+    .watch-time.watch-ending { color: #f87171; }
+
+    .watch-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .watch-match-label {
+      font-size: 0.63rem;
+      color: #6db88a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+    }
+
+    .watch-next {
+      font-size: 0.8rem;
+      color: #a7f3c7;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .watch-next.watch-soon { color: var(--bench); }
+
+    .watch-controls {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .watch-btn {
+      padding: 8px 12px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      margin: 0;
+      width: auto;
+    }
+
+    .watch-btn-pause {
+      background: var(--bench);
+      color: #000;
+    }
+
+    .watch-btn-stop {
+      background: transparent;
+      border: 2px solid var(--border);
+      color: #a7f3c7;
+    }
+
+    /* Timer button in match header */
+    .timer-btn {
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 800;
+      background: rgba(255,255,255,0.15);
+      color: #d1fae5;
+      border: none;
+      border-radius: 20px;
+      padding: 3px 10px;
+      cursor: pointer;
+      margin: 0;
+      width: auto;
+    }
+
+    .timer-btn.timing {
+      background: var(--bench);
+      color: #000;
+    }
+
     /* ── Summary table ── */
     .summary-section {
       background: #162e1f;
@@ -1043,7 +1173,10 @@
         header.className = 'match-header';
         header.innerHTML =
           `<span class="match-title">🟢 Match ${match.matchNumber} <i class="chevron">▾</i></span>` +
-          `<span class="match-subtitle">${matchDuration} min · sub every ${periodLen}'</span>`;
+          `<span style="display:flex;align-items:center;gap:8px;">` +
+          `<button class="timer-btn" data-match="${matchIdx}" onclick="event.stopPropagation();startWatch(${matchIdx})">▶ Timer</button>` +
+          `<span class="match-subtitle">${matchDuration} min · sub every ${periodLen}'</span>` +
+          `</span>`;
         section.appendChild(header);
         header.addEventListener('click', () => section.classList.toggle('collapsed'));
 
@@ -1152,7 +1285,180 @@
       container.scrollIntoView({ behavior: 'smooth' });
     }
 
+    // ── Stopwatch ────────────────────────────────────────────────────────
+    //
+    // elapsed: seconds since the timer started for the current match.
+    // We track which match is being timed so we can highlight its subs.
+
+    let watchState = {
+      matchIdx:    null,
+      elapsed:     0,
+      running:     false,
+      interval:    null,
+      alertedSubs: new Set() // tracks which sub indices have already beeped
+    };
+
+    // Sound is off by default; toggled by the 🔔 button
+    let watchSoundOn = false;
+
+    function toggleWatchSound() {
+      watchSoundOn = !watchSoundOn;
+      document.getElementById('watch-sound-btn').textContent = watchSoundOn ? '🔔' : '🔕';
+    }
+
+    // Uses the Web Audio API to generate a short beep — no audio files needed.
+    // Two quick beeps so it's easy to notice pitchside.
+    function playBeep() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.18].forEach(delay => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0.6, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.18);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.18);
+      });
+    }
+
+    function startWatch(matchIdx) {
+      // Stop any existing timer first
+      clearInterval(watchState.interval);
+      clearWatchHighlights();
+
+      watchState.matchIdx    = matchIdx;
+      watchState.elapsed     = 0;
+      watchState.running     = true;
+      watchState.alertedSubs = new Set();
+      watchState.interval    = setInterval(tickWatch, 1000);
+
+      document.getElementById('watch-match-label').textContent =
+        'Match ' + (matchIdx + 1);
+      document.getElementById('watch-bar').classList.add('active');
+      document.body.style.paddingBottom = '80px';
+
+      // Mark the active timer button
+      document.querySelectorAll('.timer-btn').forEach(b => b.classList.remove('timing'));
+      const btn = document.querySelector(`.timer-btn[data-match="${matchIdx}"]`);
+      if (btn) btn.classList.add('timing');
+
+      tickWatch();
+    }
+
+    function pauseWatch() {
+      const btn = document.getElementById('watch-pause-btn');
+      if (watchState.running) {
+        clearInterval(watchState.interval);
+        watchState.running = false;
+        btn.textContent = '▶ Resume';
+      } else {
+        watchState.interval = setInterval(tickWatch, 1000);
+        watchState.running  = true;
+        btn.textContent = '⏸ Pause';
+      }
+    }
+
+    function stopWatch() {
+      clearInterval(watchState.interval);
+      watchState.running  = false;
+      watchState.matchIdx = null;
+      document.getElementById('watch-bar').classList.remove('active');
+      document.getElementById('watch-pause-btn').textContent = '⏸ Pause';
+      document.body.style.paddingBottom = '16px';
+      document.querySelectorAll('.timer-btn').forEach(b => b.classList.remove('timing'));
+      clearWatchHighlights();
+    }
+
+    function tickWatch() {
+      watchState.elapsed++;
+
+      const { matchDuration } = currentPlan.config;
+      const totalSecs = matchDuration * 60;
+      const display   = Math.min(watchState.elapsed, totalSecs);
+      const mins = Math.floor(display / 60);
+      const secs = display % 60;
+      const timeEl = document.getElementById('watch-time');
+      timeEl.textContent = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+
+      // Turn the time red in the last 60 seconds of the match
+      timeEl.classList.toggle('watch-ending', watchState.elapsed >= totalSecs - 60);
+
+      updateWatchHighlights();
+
+      // Auto-stop when match time is up
+      if (watchState.elapsed >= totalSecs) stopWatch();
+    }
+
+    function updateWatchHighlights() {
+      if (!currentPlan || watchState.matchIdx === null) return;
+
+      const match      = currentPlan.plan[watchState.matchIdx];
+      const elapsedMin = watchState.elapsed / 60;
+      const nextEl     = document.getElementById('watch-next');
+
+      // Find the next sub that hasn't happened yet
+      const upcoming = match.subs.find(s => s.minute > elapsedMin);
+
+      if (upcoming) {
+        const secsLeft = Math.round(upcoming.minute * 60 - watchState.elapsed);
+        const m = Math.floor(secsLeft / 60);
+        const s = secsLeft % 60;
+        nextEl.textContent = 'Sub at ' + upcoming.minute + "' — in " +
+          m + ':' + String(s).padStart(2, '0');
+        nextEl.classList.toggle('watch-soon', secsLeft <= 60);
+      } else {
+        nextEl.textContent  = 'No more subs';
+        nextEl.classList.remove('watch-soon');
+      }
+
+      // Highlight sub items for this match
+      const items = document.querySelectorAll('#sub-list-' + watchState.matchIdx + ' .sub-item');
+      match.subs.forEach((sub, i) => {
+        const el = items[i];
+        if (!el) return;
+        el.classList.remove('sub-upcoming', 'sub-imminent', 'sub-done');
+        const secsTillSub = sub.minute * 60 - watchState.elapsed;
+        if (secsTillSub <= 0) {
+          el.classList.add('sub-done');
+        } else if (secsTillSub <= 30) {
+          el.classList.add('sub-imminent');
+          // Beep once when first crossing the 30s threshold
+          if (watchSoundOn && !watchState.alertedSubs.has(i)) {
+            watchState.alertedSubs.add(i);
+            playBeep();
+          }
+        } else if (secsTillSub <= 60) {
+          el.classList.add('sub-upcoming');
+        }
+      });
+    }
+
+    function clearWatchHighlights() {
+      document.querySelectorAll('.sub-item').forEach(el => {
+        el.classList.remove('sub-upcoming', 'sub-imminent', 'sub-done');
+      });
+      document.getElementById('watch-next').textContent = '';
+      document.getElementById('watch-next').classList.remove('watch-soon');
+      document.getElementById('watch-time').classList.remove('watch-ending');
+      document.getElementById('watch-time').textContent = '00:00';
+    }
+
   </script>
+  <div id="watch-bar" class="watch-bar">
+    <div id="watch-time" class="watch-time">00:00</div>
+    <div class="watch-info">
+      <div id="watch-match-label" class="watch-match-label"></div>
+      <div id="watch-next" class="watch-next"></div>
+    </div>
+    <div class="watch-controls">
+      <button id="watch-sound-btn" class="watch-btn watch-btn-stop" onclick="toggleWatchSound()" title="Toggle sound">🔔</button>
+      <button id="watch-pause-btn" class="watch-btn watch-btn-pause" onclick="pauseWatch()">⏸ Pause</button>
+      <button class="watch-btn watch-btn-stop" onclick="stopWatch()">■ Stop</button>
+    </div>
+  </div>
 
 </body>
 </html>
