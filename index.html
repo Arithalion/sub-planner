@@ -502,11 +502,44 @@
       }));
     }
 
+    // Saves the full plan state so refresh restores it exactly
+    function savePlan() {
+      if (!currentPlan) return;
+      const saved = JSON.parse(localStorage.getItem('subplanner') || '{}');
+      saved.fullPlan = currentPlan;
+      localStorage.setItem('subplanner', JSON.stringify(saved));
+    }
+
+    // ── Share via URL hash ────────────────────────────────────────────────
+    //
+    // We encode the full plan into the URL hash so anyone with the link
+    // can open the exact same interactive plan in their browser.
+    // encodeURIComponent handles special characters like Norwegian names.
+
+    function loadFromHash() {
+      const hash = window.location.hash;
+      if (!hash.startsWith('#plan=')) return false;
+      try {
+        const data = JSON.parse(decodeURIComponent(hash.slice(6)));
+        displayPlan(data.plan, data.players, data.minutesPlayed, data.perMatchMinutes, data.config);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
     function loadData() {
       const saved = localStorage.getItem('subplanner');
-      if (!saved) return; // nothing saved yet
+      if (!saved) return;
 
       const data = JSON.parse(saved);
+
+      // If a full plan was saved, restore it directly — no re-generation
+      if (data.fullPlan) {
+        const p = data.fullPlan;
+        displayPlan(p.plan, p.players, p.minutesPlayed, p.perMatchMinutes, p.config);
+        return;
+      }
 
       // Restore number inputs
       document.getElementById('players-on-pitch').value = data.playersOnPitch;
@@ -522,13 +555,12 @@
         const input = document.getElementById('player-' + (i + 1));
         if (input) input.value = name;
       });
-
-      // Data was saved, so regenerate the plan on load
-      generatePlan();
     }
 
-    // Run loadData as soon as the page is ready
-    document.addEventListener('DOMContentLoaded', loadData);
+    // Run loadData as soon as the page is ready — but check for a shared link first
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!loadFromHash()) loadData();
+    });
 
 
     // ── Dynamic name fields ──────────────────────────────────────────────
@@ -719,6 +751,9 @@
       displayPlan(plan, players, minutesPlayed, perMatchMinutes, {
         playersOnPitch, squadSize, numMatches, matchDuration, numSegments, numSubs
       });
+
+      // Save the full plan so refresh restores it exactly
+      savePlan();
     }
 
 
@@ -841,6 +876,9 @@
       updateSubFooter(matchIdx);
       document.getElementById('sub-list-' + matchIdx).innerHTML = renderSubListItems(matchIdx);
       updatePlaytimeSummary();
+
+      // Persist manual changes so refresh keeps them
+      savePlan();
     }
 
     function updateColumnValidation(matchIdx) {
@@ -924,10 +962,30 @@
       newPlanBtn.addEventListener('click', () => {
         if (!confirm('Start a new plan? This will clear the current one.')) return;
         localStorage.removeItem('subplanner');
+        history.replaceState(null, '', location.pathname); // clear share link hash
         container.innerHTML = '';
         document.getElementById('input-section').style.display = 'block';
         document.getElementById('input-section').scrollIntoView({ behavior: 'smooth' });
         currentPlan = null;
+      });
+
+      const shareBtn = document.createElement('button');
+      shareBtn.textContent = '🔗 Share';
+      shareBtn.className = 'btn-secondary';
+      shareBtn.style.margin = '0';
+      shareBtn.addEventListener('click', () => {
+        const encoded = encodeURIComponent(JSON.stringify({
+          plan: currentPlan.plan,
+          players: currentPlan.players,
+          minutesPlayed: currentPlan.minutesPlayed,
+          perMatchMinutes: currentPlan.perMatchMinutes,
+          config: currentPlan.config
+        }));
+        const url = location.origin + location.pathname + '#plan=' + encoded;
+        navigator.clipboard.writeText(url).then(() => {
+          shareBtn.textContent = '✓ Copied!';
+          setTimeout(() => { shareBtn.textContent = '🔗 Share'; }, 2000);
+        });
       });
 
       const topBtnRow = document.createElement('div');
@@ -935,6 +993,7 @@
       editBtn.style.margin = '0';
       topBtnRow.appendChild(editBtn);
       topBtnRow.appendChild(newPlanBtn);
+      topBtnRow.appendChild(shareBtn);
       container.appendChild(topBtnRow);
 
       // Stats bar
