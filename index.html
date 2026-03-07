@@ -1353,11 +1353,11 @@
       if (watchState.running) {
         clearInterval(watchState.interval);
         watchState.running = false;
-        btn.textContent = '▶ Resume';
+        btn.textContent = '▶';
       } else {
         watchState.interval = setInterval(tickWatch, 1000);
         watchState.running  = true;
-        btn.textContent = '⏸ Pause';
+        btn.textContent = '⏸';
       }
     }
 
@@ -1366,7 +1366,7 @@
       watchState.running  = false;
       watchState.matchIdx = null;
       document.getElementById('watch-bar').classList.remove('active');
-      document.getElementById('watch-pause-btn').textContent = '⏸ Pause';
+      document.getElementById('watch-pause-btn').textContent = '⏸';
       document.body.style.paddingBottom = '16px';
       document.querySelectorAll('.timer-btn').forEach(b => b.classList.remove('timing'));
       clearWatchHighlights();
@@ -1455,8 +1455,8 @@
     </div>
     <div class="watch-controls">
       <button id="watch-sound-btn" class="watch-btn watch-btn-stop" onclick="toggleWatchSound()" title="Toggle sound">🔔</button>
-      <button id="watch-pause-btn" class="watch-btn watch-btn-pause" onclick="pauseWatch()">⏸ Pause</button>
-      <button class="watch-btn watch-btn-stop" onclick="stopWatch()">■ Stop</button>
+      <button id="watch-pause-btn" class="watch-btn watch-btn-pause" onclick="pauseWatch()">⏸</button>
+      <button class="watch-btn watch-btn-stop" onclick="stopWatch()">■</button>
     </div>
   </div>
 
