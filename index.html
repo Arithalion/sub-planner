@@ -602,6 +602,12 @@
 
     <label for="squad-size">Squad size</label>
     <input type="number" id="squad-size" min="1" placeholder="e.g. 5">
+
+    <label for="time-between-subs">Time between subs — minutes (optional)</label>
+    <input type="number" id="time-between-subs" min="1" placeholder="auto">
+
+    <label for="max-subs-per-change">Max players subbed at once (optional)</label>
+    <input type="number" id="max-subs-per-change" min="1" placeholder="no limit">
   </div>
 
   <div class="card" id="player-names" style="display: none;">
@@ -748,8 +754,10 @@
         players.push(input && input.value.trim() ? input.value.trim() : 'Player ' + i);
       }
 
-      // Divide each match into squadSize segments → equal time per player per match
-      const numSegments = squadSize;
+      // Divide each match into segments based on sub interval (or default to squadSize)
+      const subInterval     = parseInt(document.getElementById('time-between-subs').value);
+      const maxSubsPerChange = parseInt(document.getElementById('max-subs-per-change').value) || null;
+      const numSegments = subInterval ? Math.max(1, Math.round(matchDuration / subInterval)) : squadSize;
       const numSubs     = numSegments - 1;
 
       const minutesPlayed  = new Array(squadSize).fill(0);
@@ -823,6 +831,21 @@
 
           let newLineup = sorted.slice(0, playersOnPitch);
 
+          // If max subs per change is set, cap how many players swap at once
+          if (maxSubsPerChange !== null) {
+            const newEntrants = newLineup.filter(i => !prevLineup.includes(i));
+            if (newEntrants.length > maxSubsPerChange) {
+              // Keep the playersOnPitch - maxSubsPerChange "fairest" players from the previous lineup
+              // (those who've played the fewest segments this match — they still need time)
+              const stayCount = playersOnPitch - maxSubsPerChange;
+              const keepFromPrev = [...prevLineup]
+                .sort((a, b) => matchSegsPlayed[a] - matchSegsPlayed[b] || minutesPlayed[a] - minutesPlayed[b])
+                .slice(0, stayCount);
+              const incoming = sorted.filter(i => !keepFromPrev.includes(i)).slice(0, maxSubsPerChange);
+              newLineup = [...keepFromPrev, ...incoming];
+            }
+          }
+
           // Safety: if lineup is identical to previous, force one swap
           // (picks the most-played on-pitch out, least-played bench in)
           if (newLineup.every(i => prevLineup.includes(i))) {
@@ -876,7 +899,9 @@
       document.getElementById('input-section').style.display = 'none';
 
       displayPlan(plan, players, minutesPlayed, perMatchMinutes, {
-        playersOnPitch, squadSize, numMatches, matchDuration, numSegments, numSubs
+        playersOnPitch, squadSize, numMatches, matchDuration, numSegments, numSubs,
+        timeBetweenSubs: subInterval || null,
+        maxSubsPerChange
       });
 
       // Save the full plan so refresh restores it exactly
@@ -1066,6 +1091,8 @@
       document.getElementById('squad-size').value       = config.squadSize;
       document.getElementById('num-matches').value      = config.numMatches;
       document.getElementById('match-duration').value   = config.matchDuration;
+      document.getElementById('time-between-subs').value   = config.timeBetweenSubs || '';
+      document.getElementById('max-subs-per-change').value = config.maxSubsPerChange || '';
       document.getElementById('squad-size').dispatchEvent(new Event('input'));
       players.forEach((name, i) => {
         const input = document.getElementById('player-' + (i + 1));
