@@ -1061,6 +1061,17 @@
       // Store plan state so interactive handlers can access it
       currentPlan = { plan, players, minutesPlayed, perMatchMinutes, config };
 
+      // Populate input fields so View/Edit Input always shows current values
+      document.getElementById('players-on-pitch').value = config.playersOnPitch;
+      document.getElementById('squad-size').value       = config.squadSize;
+      document.getElementById('num-matches').value      = config.numMatches;
+      document.getElementById('match-duration').value   = config.matchDuration;
+      document.getElementById('squad-size').dispatchEvent(new Event('input'));
+      players.forEach((name, i) => {
+        const input = document.getElementById('player-' + (i + 1));
+        if (input) input.value = name;
+      });
+
       const { playersOnPitch, squadSize, numMatches, matchDuration, numSegments, numSubs } = config;
       const minsPerPlayer = Math.round(playersOnPitch * matchDuration / squadSize);
       const totalMins     = Math.round(playersOnPitch * matchDuration * numMatches / squadSize);
